@@ -1,4 +1,4 @@
-Write-Host "Open SIEM - local dev startup" -ForegroundColor Cyan
+Write-Host "ZeroDay - local dev startup" -ForegroundColor Cyan
 
 if (-not (Test-Path ".venv")) {
     Write-Host "Creating virtual environment..."

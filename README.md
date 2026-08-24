@@ -1,4 +1,4 @@
-# Open SIEM
+# ZeroDay
 
 Um SIEM (Security Information and Event Management) completo e self-hosted:
 ingestão de logs (syslog UDP/TCP, HTTP, agentes), normalização, motor de

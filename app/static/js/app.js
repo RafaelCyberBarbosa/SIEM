@@ -41,12 +41,6 @@ document.getElementById("logout-btn").addEventListener("click", () => {
   showLogin();
 });
 
-if (API.getToken() && API.getUser()) {
-  showApp();
-} else {
-  showLogin();
-}
-
 // ---------- Router ----------
 
 const ROUTES = {
@@ -634,4 +628,13 @@ function openModal(html) {
 function closeModal() {
   const el = document.getElementById("modal-overlay");
   if (el) el.remove();
+}
+
+// ---------- Bootstrap ----------
+// Runs last so it can safely reference ROUTES/router/showApp, all defined above.
+
+if (API.getToken() && API.getUser()) {
+  showApp();
+} else {
+  showLogin();
 }

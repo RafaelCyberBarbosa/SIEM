@@ -23,7 +23,7 @@ def _send_email_sync(alert: Alert):
         f"Created at: {alert.created_at}\n"
     )
     msg = MIMEText(body)
-    msg["Subject"] = f"[SIEM][{alert.severity.upper()}] {alert.title}"
+    msg["Subject"] = f"[ZeroDay][{alert.severity.upper()}] {alert.title}"
     msg["From"] = settings.smtp_from
     msg["To"] = settings.smtp_to
 

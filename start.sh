@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-echo "Open SIEM - local dev startup"
+echo "ZeroDay - local dev startup"
 
 if [ ! -d ".venv" ]; then
     echo "Creating virtual environment..."

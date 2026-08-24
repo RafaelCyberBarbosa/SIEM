@@ -71,7 +71,7 @@ async def lifespan(app: FastAPI):
         tr.close()
 
 
-app = FastAPI(title="Open SIEM", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="ZeroDay", version="1.0.0", lifespan=lifespan)
 app.include_router(api_router)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
