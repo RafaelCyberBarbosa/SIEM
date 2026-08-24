@@ -172,6 +172,25 @@ class AlertPage(BaseModel):
     items: list[AlertOut]
 
 
+# --- Attack chain / entity timeline ---
+class TimelineItem(BaseModel):
+    type: str  # "event" | "alert"
+    timestamp: datetime
+    title: str
+    severity: str
+    is_anchor: bool = False
+    detail: dict[str, Any]
+
+
+class TimelineOut(BaseModel):
+    entity_type: str
+    entity_value: str
+    window_start: datetime
+    window_end: datetime
+    mitre_techniques: list[str]
+    items: list[TimelineItem]
+
+
 # --- Stats ---
 class DashboardStats(BaseModel):
     total_events_24h: int
