@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Open SIEM</title>
+<link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<div id="login-screen" class="login-screen">
+  <form id="login-form" class="login-box">
+    <h1>Open SIEM</h1>
+    <p class="subtitle">Security Information &amp; Event Management</p>
+    <input type="text" id="login-username" placeholder="Utilizador" autocomplete="username" required>
+    <input type="password" id="login-password" placeholder="Palavra-passe" autocomplete="current-password" required>
+    <button type="submit">Entrar</button>
+    <div id="login-error" class="error-msg"></div>
+  </form>
+</div>
+
+<div id="app" class="app hidden">
+  <aside class="sidebar">
+    <div class="brand">🛡 Open SIEM</div>
+    <nav>
+      <a href="#/dashboard" data-route="dashboard">📊 Dashboard</a>
+      <a href="#/events" data-route="events">📄 Eventos</a>
+      <a href="#/alerts" data-route="alerts">🚨 Alertas</a>
+      <a href="#/livetail" data-route="livetail">📡 Live Tail</a>
+      <a href="#/rules" data-route="rules">🧠 Regras</a>
+      <a href="#/sources" data-route="sources">🔌 Fontes</a>
+      <a href="#/users" data-route="users" id="nav-users">👤 Utilizadores</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div id="current-user"></div>
+      <button id="logout-btn">Sair</button>
+    </div>
+  </aside>
+  <main id="main-content" class="main-content"></main>
+</div>
+
+<div id="toast-container"></div>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/charts.js"></script>
+<script src="/static/js/app.js"></script>
+</body>
+</html>
