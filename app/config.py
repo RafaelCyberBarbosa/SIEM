@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     detection_interval_seconds: int = 5
 
+    ueba_interval_seconds: int = 15
+    geoip_enabled: bool = True
+
     smtp_enabled: bool = False
     smtp_host: str = ""
     smtp_port: int = 587

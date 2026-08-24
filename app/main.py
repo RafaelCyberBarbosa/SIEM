@@ -12,6 +12,7 @@ from app.models import User
 from app.security import hash_password
 from app.detection.rules_loader import load_default_rules_into_db
 from app.detection.engine import engine as detection_engine
+from app.detection.ueba import ueba_engine
 from app.ingestion.syslog_server import start_udp_server, start_tcp_server
 from app.core.ws_manager import set_main_loop
 from app.core import retention
@@ -59,12 +60,14 @@ async def lifespan(app: FastAPI):
 
     task = asyncio.create_task(detection_engine.run_forever(settings.detection_interval_seconds))
     _background_tasks.append(task)
+    _background_tasks.append(asyncio.create_task(ueba_engine.run_forever(settings.ueba_interval_seconds)))
     _background_tasks.append(asyncio.create_task(retention.run_forever()))
 
     logger.info("SIEM backend ready.")
     yield
 
     detection_engine.stop()
+    ueba_engine.stop()
     for t in _background_tasks:
         t.cancel()
     for tr in _transports:
