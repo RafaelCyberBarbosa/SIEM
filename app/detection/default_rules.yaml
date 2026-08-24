@@ -142,3 +142,206 @@
     group_by: src_ip
     threshold: 20
     window_seconds: 30
+
+# ---------------- File Integrity Monitoring ----------------
+# These fire from events produced by agents/file_integrity_agent.py, which watches
+# configured files/folders and reports file_created / file_modified / file_deleted.
+
+- rule_key: file_created_watch
+  name: "File Created"
+  description: "A new file was created in a monitored location."
+  type: match
+  severity: info
+  mitre: "T1074 - Data Staged"
+  definition:
+    filter: { category: file, action: file_created }
+
+- rule_key: file_modified_watch
+  name: "File Modified"
+  description: "A file was modified in a monitored location."
+  type: match
+  severity: low
+  mitre: "T1565 - Data Manipulation"
+  definition:
+    filter: { category: file, action: file_modified }
+
+- rule_key: file_deleted_watch
+  name: "File Deleted"
+  description: "A file was deleted from a monitored location."
+  type: match
+  severity: medium
+  mitre: "T1070.004 - File Deletion"
+  definition:
+    filter: { category: file, action: file_deleted }
+
+- rule_key: sensitive_system_file_modified
+  name: "Sensitive System File Modified"
+  description: "A critical system file (hosts file, passwd/shadow, sudoers, driver configs) was modified."
+  type: match
+  severity: critical
+  mitre: "T1565.001 - Stored Data Manipulation"
+  definition:
+    filter: { category: file, action: file_modified, message_contains_any: ["drivers\\etc\\hosts", "/etc/passwd", "/etc/shadow", "/etc/sudoers", "win.ini", "system32\\config"] }
+
+- rule_key: executable_file_dropped
+  name: "Executable File Dropped"
+  description: "A new executable/script file appeared in a monitored location - common malware drop behavior."
+  type: match
+  severity: high
+  mitre: "T1105 - Ingress Tool Transfer"
+  definition:
+    filter: { category: file, action: file_created, message_contains_any: [".exe", ".dll", ".scr", ".bat", ".ps1", ".vbs", ".jar"] }
+
+- rule_key: mass_file_modification_ransomware
+  name: "Mass File Modification (Possible Ransomware)"
+  description: "A very high number of files were modified on the same host in a short window - classic ransomware encryption behavior."
+  type: threshold
+  severity: critical
+  mitre: "T1486 - Data Encrypted for Impact"
+  definition:
+    filter: { category: file, action: file_modified }
+    group_by: host
+    threshold: 50
+    window_seconds: 60
+
+- rule_key: mass_file_deletion
+  name: "Mass File Deletion"
+  description: "A very high number of files were deleted on the same host in a short window."
+  type: threshold
+  severity: high
+  mitre: "T1485 - Data Destruction"
+  definition:
+    filter: { category: file, action: file_deleted }
+    group_by: host
+    threshold: 30
+    window_seconds: 60
+
+# ---------------- Account / Identity ----------------
+
+- rule_key: guest_account_enabled
+  name: "Guest Account Enabled"
+  description: "The built-in guest account was enabled - a common low-noise persistence technique."
+  type: match
+  severity: high
+  mitre: "T1078 - Valid Accounts"
+  definition:
+    filter: { message_contains_any: ["guest account enabled", "enabled the guest account", "guest account was enabled"] }
+
+- rule_key: account_password_never_expires
+  name: "Account Set to Password Never Expires"
+  description: "An account had its password policy weakened to never expire."
+  type: match
+  severity: medium
+  mitre: "T1098 - Account Manipulation"
+  definition:
+    filter: { message_contains_any: ["password never expires", "pwdneverexpires"] }
+
+- rule_key: admin_account_renamed
+  name: "Built-in Administrator Account Renamed"
+  description: "The built-in administrator account was renamed, which can indicate evasion of default-account detections."
+  type: match
+  severity: medium
+  mitre: "T1036 - Masquerading"
+  definition:
+    filter: { message_contains_any: ["administrator account renamed", "renamed built-in administrator"] }
+
+- rule_key: failed_privileged_login
+  name: "Failed Login for Privileged Account"
+  description: "A failed login attempt targeted a high-value account (root/administrator/domain admin)."
+  type: match
+  severity: high
+  mitre: "T1110 - Brute Force"
+  definition:
+    filter: { category: authentication, outcome: failure, message_contains_any: ["for root", "for administrator", "for domain admin"] }
+
+# ---------------- System hardening / persistence ----------------
+
+- rule_key: scheduled_task_created
+  name: "Scheduled Task Created"
+  description: "A new scheduled task was registered - a common persistence mechanism."
+  type: match
+  severity: medium
+  mitre: "T1053.005 - Scheduled Task"
+  definition:
+    filter: { action: scheduled_task_created }
+
+- rule_key: audit_policy_changed
+  name: "Audit Policy Changed"
+  description: "The system's audit/logging policy was changed - can indicate an attempt to reduce visibility."
+  type: match
+  severity: medium
+  mitre: "T1562.002 - Disable Windows Event Logging"
+  definition:
+    filter: { action: audit_policy_changed }
+
+- rule_key: firewall_disabled
+  name: "Host Firewall Disabled"
+  description: "The local firewall was disabled on a host."
+  type: match
+  severity: high
+  mitre: "T1562.004 - Disable or Modify System Firewall"
+  definition:
+    filter: { message_contains_any: ["firewall disabled", "windows firewall has been disabled", "ufw disabled", "iptables flush"] }
+
+- rule_key: antivirus_disabled
+  name: "Endpoint Protection Disabled"
+  description: "Antivirus/EDR real-time protection was disabled on a host."
+  type: match
+  severity: critical
+  mitre: "T1562.001 - Disable or Modify Tools"
+  definition:
+    filter: { message_contains_any: ["real-time protection disabled", "antivirus disabled", "defender disabled", "windows defender turned off"] }
+
+# ---------------- Network ----------------
+
+- rule_key: connection_to_known_malicious_port
+  name: "Connection to Known Malicious Port"
+  description: "Network activity was seen on a port commonly associated with reverse shells or C2 frameworks (Metasploit, common backdoors)."
+  type: match
+  severity: critical
+  mitre: "T1071 - Application Layer Protocol"
+  definition:
+    filter: { category: network, dst_port: [4444, 1337, 31337, 6666, 6667, 12345, 5555] }
+
+- rule_key: high_volume_outbound_connections
+  name: "High Volume of Outbound Connections"
+  description: "A host made an unusually large number of outbound network connections in a short window - possible C2 beaconing or data exfiltration."
+  type: threshold
+  severity: medium
+  mitre: "T1041 - Exfiltration Over C2 Channel"
+  definition:
+    filter: { category: network, outcome: success }
+    group_by: host
+    threshold: 150
+    window_seconds: 60
+
+# ---------------- Web ----------------
+
+- rule_key: webshell_upload_attempt
+  name: "Possible Web Shell Upload/Access"
+  description: "A web request pattern consistent with uploading or invoking a web shell was detected."
+  type: match
+  severity: critical
+  mitre: "T1505.003 - Web Shell"
+  definition:
+    filter: { category: web, message_contains_any: ["c99shell", "b374k", "eval(base64_decode", "cmd=whoami", "cmd=id", "r57shell"] }
+
+- rule_key: remote_file_inclusion_attempt
+  name: "Remote File Inclusion Attempt"
+  description: "A web request tried to include a remotely-hosted file, a classic RFI exploitation pattern."
+  type: match
+  severity: high
+  mitre: "T1190 - Exploit Public-Facing Application"
+  definition:
+    filter: { category: web, message_contains_any: ["=http://", "=https://", "?file=http", "include(http"] }
+
+# ---------------- Malware / execution ----------------
+
+- rule_key: reverse_shell_command
+  name: "Reverse Shell Command Pattern"
+  description: "A command matching a common reverse shell one-liner was observed."
+  type: match
+  severity: critical
+  mitre: "T1059 - Command and Scripting Interpreter"
+  definition:
+    filter: { message_contains_any: ["/dev/tcp/", "bash -i >&", "nc -e /bin/sh", "socat exec", "powershell -nop -w hidden -c"] }

@@ -70,6 +70,8 @@ WIN_SECURITY_EVENT_MAP = {
     "1102": ("system", "audit_log_cleared", "success", "high"),
     "7045": ("system", "service_installed", "success", "medium"),
     "4688": ("process", "process_start", "success", "info"),
+    "4698": ("system", "scheduled_task_created", "success", "medium"),
+    "4719": ("system", "audit_policy_changed", "success", "medium"),
 }
 
 
