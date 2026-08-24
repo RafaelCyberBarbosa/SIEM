@@ -333,6 +333,7 @@ button.btn.danger { background: linear-gradient(135deg, var(--red), var(--crit))
   box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 60px -20px var(--accent-glow);
   animation: rise .2s ease-out;
 }
+.modal.modal-wide { width: 760px; }
 .modal h2 { margin-top: 0; font-size: 17px; font-family: var(--font-display); letter-spacing: .02em; }
 .modal textarea {
   width: 100%; background: var(--panel-solid); border: 1px solid var(--border); color: var(--text);
@@ -369,3 +370,30 @@ pre.raw-block {
 .clickable:hover { color: var(--accent); }
 .small { font-size: 11px; color: var(--text-dim); }
 .mono { font-family: var(--font-mono); }
+
+/* ============== Attack chain timeline ============== */
+.timeline {
+  position: relative; margin: 4px 0 8px; padding-left: 26px;
+  max-height: 55vh; overflow-y: auto;
+}
+.timeline::before {
+  content: ""; position: absolute; left: 8px; top: 4px; bottom: 4px; width: 2px;
+  background: linear-gradient(var(--border-strong), var(--border));
+}
+.timeline-item { position: relative; padding: 0 0 20px 18px; }
+.timeline-item:last-child { padding-bottom: 2px; }
+.timeline-dot {
+  position: absolute; left: -26px; top: 3px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--panel-solid); border: 2px solid var(--accent);
+}
+.timeline-item.anchor .timeline-dot {
+  background: var(--accent); box-shadow: 0 0 10px 2px var(--accent-glow);
+}
+.sev-dot-info { border-color: #3ea6ff; }
+.sev-dot-low { border-color: var(--green); }
+.sev-dot-medium { border-color: var(--yellow); }
+.sev-dot-high { border-color: var(--orange); }
+.sev-dot-critical { border-color: var(--crit); box-shadow: 0 0 8px -1px rgba(255,37,89,.6); }
+.timeline-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.timeline-title { font-size: 13.5px; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+.timeline-item.anchor .timeline-title { color: var(--accent); }

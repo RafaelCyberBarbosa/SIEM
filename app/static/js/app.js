@@ -228,7 +228,10 @@ function showEventModal(id) {
     <pre class="raw-block">${escapeHtml(JSON.stringify(ev.extra, null, 2))}</pre>
     <p><b>Linha bruta (raw)</b></p>
     <pre class="raw-block">${escapeHtml(ev.raw)}</pre>
-    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button></div>
+    <div class="modal-actions">
+      <button class="btn secondary" onclick="closeModal()">Fechar</button>
+      <button class="btn" onclick='showTimeline("event", ${JSON.stringify(ev.id)})'>Ver cadeia de ataque</button>
+    </div>
   `);
 }
 
@@ -323,8 +326,49 @@ async function showAlertModal(id) {
       </select>
       <button class="btn" onclick='updateAlertStatus(${JSON.stringify(a.id)})'>Atualizar estado</button>
       <button class="btn secondary" onclick="closeModal()">Fechar</button>
+      <button class="btn" onclick='showTimeline("alert", ${JSON.stringify(a.id)})'>Ver cadeia de ataque</button>
     </div>
   `);
+}
+
+// ---------- Attack chain timeline ----------
+
+async function showTimeline(anchorType, anchorId) {
+  let data;
+  try {
+    data = await API.get(`/api/timeline/${anchorType}/${anchorId}?window_minutes=120`);
+  } catch (err) {
+    toast(err.message, "error");
+    return;
+  }
+
+  const entityLabel = { src_ip: "IP de origem", host: "Host", user: "Utilizador", none: "" }[data.entity_type] || data.entity_type;
+
+  openModal(`
+    <h2>Cadeia de ataque</h2>
+    <p class="small">
+      ${data.entity_type !== "none" ? `${entityLabel}: <span class="mono">${escapeHtml(data.entity_value)}</span> — ` : ""}
+      janela de ${fmtDate(data.window_start)} a ${fmtDate(data.window_end)}
+    </p>
+    ${data.mitre_techniques.length ? `<div style="margin-bottom:14px;">${data.mitre_techniques.map(m => `<span class="badge sev-high" style="margin-right:6px;">${escapeHtml(m)}</span>`).join("")}</div>` : ""}
+    <div class="timeline">
+      ${data.items.map(item => `
+        <div class="timeline-item ${item.is_anchor ? "anchor" : ""}">
+          <div class="timeline-dot sev-dot-${item.severity}"></div>
+          <div class="timeline-content">
+            <div class="timeline-head">
+              <span class="small mono">${fmtDate(item.timestamp)}</span>
+              ${severityBadge(item.severity)}
+              <span class="badge" style="background:${item.type === "alert" ? "rgba(255,37,89,.12)" : "rgba(46,230,214,.1)"};color:${item.type === "alert" ? "#ff5c81" : "#2ee6d6"};">${item.type === "alert" ? "ALERTA" : "EVENTO"}</span>
+            </div>
+            <div class="timeline-title">${escapeHtml(item.title)}${item.detail.mitre ? ` <span class="small">(${escapeHtml(item.detail.mitre)})</span>` : ""}</div>
+            <div class="small">${escapeHtml(item.detail.message || item.detail.description || "")}</div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+    <div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button></div>
+  `, "wide");
 }
 
 async function updateAlertStatus(id) {
@@ -616,12 +660,12 @@ async function deleteUser(id) {
 
 // ---------- Modal helpers ----------
 
-function openModal(html) {
+function openModal(html, variant) {
   closeModal();
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
   overlay.id = "modal-overlay";
-  overlay.innerHTML = `<div class="modal">${html}</div>`;
+  overlay.innerHTML = `<div class="modal${variant === "wide" ? " modal-wide" : ""}">${html}</div>`;
   overlay.addEventListener("click", (e) => { if (e.target === overlay) closeModal(); });
   document.body.appendChild(overlay);
 }
