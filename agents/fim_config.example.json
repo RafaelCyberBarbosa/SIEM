@@ -1,0 +1,12 @@
+{
+  "siem_url": "http://localhost:8000",
+  "api_key": "PASTE_SOURCE_API_KEY_HERE",
+  "hostname": "my-workstation",
+  "poll_interval_seconds": 5,
+  "watch_paths": [
+    "C:\\Users\\me\\Desktop",
+    "C:\\Windows\\System32\\drivers\\etc\\hosts"
+  ],
+  "ignore_extensions": [".tmp", ".log", ".swp", ".lock"],
+  "max_files": 20000
+}
