@@ -15,11 +15,13 @@
 <div id="login-screen" class="login-screen">
   <canvas id="bg-fx"></canvas>
   <div class="scanline"></div>
+  <div class="crt-overlay"></div>
+  <div class="boot-log" id="boot-log"></div>
   <form id="login-form" class="login-box">
     <div class="login-mark">
       <svg viewBox="0 0 100 100" class="shield-icon"><path d="M50 6 90 21v27c0 27-17 42-40 46C27 90 10 75 10 48V21Z" fill="none" stroke="currentColor" stroke-width="5"/><path d="M34 50l11 11 21-24" fill="none" stroke="currentColor" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
-    <h1>ZERO<span>DAY</span></h1>
+    <h1 class="glitch-text" data-text="ZERODAY">ZERO<span>DAY</span></h1>
     <p class="subtitle">SECURITY INFORMATION &amp; EVENT MANAGEMENT</p>
     <div class="field-line"><input type="text" id="login-username" placeholder="Utilizador" autocomplete="username" required></div>
     <div class="field-line"><input type="password" id="login-password" placeholder="Palavra-passe" autocomplete="current-password" required></div>
@@ -30,10 +32,11 @@
 </div>
 
 <div id="app" class="app hidden">
+  <canvas id="app-bg-fx"></canvas>
   <aside class="sidebar">
     <div class="brand">
       <svg viewBox="0 0 100 100" class="shield-icon-sm"><path d="M50 6 90 21v27c0 27-17 42-40 46C27 90 10 75 10 48V21Z" fill="none" stroke="currentColor" stroke-width="6"/><path d="M34 50l11 11 21-24" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span>ZERO<b>DAY</b></span>
+      <span class="glitch-text" data-text="ZERODAY">ZERO<b>DAY</b></span>
     </div>
     <nav>
       <a href="#/dashboard" data-route="dashboard"><i>◆</i>Dashboard</a>
@@ -46,12 +49,21 @@
       <a href="#/users" data-route="users" id="nav-users"><i>◉</i>Utilizadores</a>
     </nav>
     <div class="sidebar-footer">
+      <div class="sys-readout">
+        <div class="sys-row"><span>UPTIME</span><b id="clock-uptime">00:00:00</b></div>
+        <div class="sys-row"><span>UTC</span><b id="clock-utc">--:--:--</b></div>
+      </div>
       <div class="uptime"><span class="dot live"></span> sistema operacional</div>
       <div id="current-user"></div>
       <button id="logout-btn">Terminar sessão</button>
     </div>
   </aside>
-  <main id="main-content" class="main-content"></main>
+  <div class="content-col">
+    <div class="hud-ticker" id="hud-ticker">
+      <div class="hud-ticker-track" id="hud-ticker-track"><span>A carregar telemetria do sistema…</span></div>
+    </div>
+    <main id="main-content" class="main-content"></main>
+  </div>
 </div>
 
 <div id="toast-container"></div>
