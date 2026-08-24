@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api import auth, users, events, alerts, rules, sources, ingest, stats, ws, timeline
+from app.api import auth, users, events, alerts, rules, sources, ingest, stats, ws, timeline, ueba
 
 api_router = APIRouter()
 api_router.include_router(auth.router)
@@ -12,4 +12,5 @@ api_router.include_router(sources.router)
 api_router.include_router(ingest.router)
 api_router.include_router(stats.router)
 api_router.include_router(timeline.router)
+api_router.include_router(ueba.router)
 api_router.include_router(ws.router)

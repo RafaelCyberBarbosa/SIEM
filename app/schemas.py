@@ -191,6 +191,21 @@ class TimelineOut(BaseModel):
     items: list[TimelineItem]
 
 
+# --- UEBA ---
+class UserProfileOut(BaseModel):
+    user: str
+    login_count: int
+    hour_histogram: list[int]
+    known_countries: list[str]
+    known_src_ips: list[str]
+    last_login_at: Optional[datetime] = None
+    last_login_src_ip: str
+    last_login_country: str
+
+    class Config:
+        from_attributes = True
+
+
 # --- Stats ---
 class DashboardStats(BaseModel):
     total_events_24h: int
