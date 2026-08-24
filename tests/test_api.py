@@ -72,3 +72,37 @@ def test_rules_listed(client, auth_headers):
     assert resp.status_code == 200
     keys = [r["rule_key"] for r in resp.json()]
     assert "ssh_bruteforce" in keys
+
+
+def test_timeline_reconstructs_attack_chain(client, auth_headers):
+    import asyncio
+    from app.detection.engine import engine as detection_engine
+
+    ip = "198.51.100.200"
+    events = [
+        {"category": "authentication", "action": "login_failure", "outcome": "failure",
+         "src_ip": ip, "user": "root", "message": f"Failed password for root from {ip} port {40000+i} ssh2"}
+        for i in range(6)
+    ]
+    events.append({"category": "authentication", "action": "login_success", "outcome": "success",
+                    "src_ip": ip, "user": "root", "message": f"Accepted password for root from {ip} port 40010 ssh2"})
+    events.append({"category": "account_management", "action": "user_added_to_privileged_group",
+                    "outcome": "success", "src_ip": ip, "message": "usermod: add 'x' to group 'sudo'"})
+
+    resp = client.post("/api/ingest/bulk", headers={"X-API-Key": "test-ingest-key"}, json=events)
+    assert resp.status_code == 200
+    ids = resp.json()["ids"]
+
+    asyncio.run(detection_engine.process_new_events())
+
+    resp = client.get(f"/api/timeline/event/{ids[0]}?window_minutes=60", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["entity_type"] == "src_ip"
+    assert data["entity_value"] == ip
+    # 8 events + at least 3 alerts (brute-force threshold, sequence, privileged group match)
+    assert len(data["items"]) >= 11
+    assert any(item["type"] == "alert" and item["is_anchor"] is False for item in data["items"])
+    assert any(item["is_anchor"] for item in data["items"])
+    assert "T1098 - Account Manipulation" in data["mitre_techniques"]
