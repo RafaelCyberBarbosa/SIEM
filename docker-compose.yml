@@ -1,0 +1,44 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: siem
+      POSTGRES_PASSWORD: siem
+      POSTGRES_DB: siem
+    volumes:
+      - siem_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  siem:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql+psycopg2://siem:siem@db:5432/siem
+      SECRET_KEY: ${SECRET_KEY:-change-this-to-a-long-random-string}
+      INGEST_API_KEY: ${INGEST_API_KEY:-change-this-ingest-key}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-password}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      SYSLOG_UDP_ENABLED: "true"
+      SYSLOG_TCP_ENABLED: "true"
+      SYSLOG_UDP_PORT: "5514"
+      SYSLOG_TCP_PORT: "5514"
+      SYSLOG_BIND_HOST: "0.0.0.0"
+      DETECTION_INTERVAL_SECONDS: "5"
+      SMTP_ENABLED: ${SMTP_ENABLED:-false}
+      WEBHOOK_ENABLED: ${WEBHOOK_ENABLED:-false}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+    ports:
+      - "8000:8000"
+      - "5514:5514/udp"
+      - "5514:5514/tcp"
+    volumes:
+      - siem_data:/srv/siem/data
+
+volumes:
+  siem_pgdata:
+  siem_data:
