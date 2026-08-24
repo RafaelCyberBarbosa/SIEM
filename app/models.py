@@ -128,3 +128,35 @@ class DetectionState(Base):
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(String(255), default="")
+
+
+class GeoIPCache(Base):
+    """Local cache of IP -> country/coordinates lookups, so the same IP is
+    never resolved twice and the SIEM can work offline once warmed up."""
+    __tablename__ = "geoip_cache"
+
+    ip: Mapped[str] = mapped_column(String(64), primary_key=True)
+    country_code: Mapped[str] = mapped_column(String(8), default="")
+    country_name: Mapped[str] = mapped_column(String(128), default="")
+    lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    resolved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class UserBehaviorProfile(Base):
+    """Learned baseline of 'normal' for a single user, used by the UEBA
+    engine to score new logins for anomalies (odd hour, new country,
+    impossible travel)."""
+    __tablename__ = "user_behavior_profiles"
+
+    user: Mapped[str] = mapped_column(String(128), primary_key=True)
+    login_count: Mapped[int] = mapped_column(Integer, default=0)
+    hour_histogram: Mapped[list] = mapped_column(JSON, default=lambda: [0] * 24)
+    known_countries: Mapped[list] = mapped_column(JSON, default=list)
+    known_src_ips: Mapped[list] = mapped_column(JSON, default=list)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_src_ip: Mapped[str] = mapped_column(String(64), default="")
+    last_login_country: Mapped[str] = mapped_column(String(8), default="")
+    last_login_lat: Mapped[float | None] = mapped_column(Float, nullable=True)
+    last_login_lon: Mapped[float | None] = mapped_column(Float, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now, onupdate=now)
