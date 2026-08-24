@@ -8,14 +8,12 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.database import SessionLocal
-from app.models import Event, Rule, Alert, DetectionState
-from app.core.ws_manager import manager
-from app.alerting.notifiers import dispatch_alert_notifications
+from app.models import Event, Rule, DetectionState
+from app.detection.alert_utils import raise_alert
 
 logger = logging.getLogger("siem.detection")
 
 CHECKPOINT_KEY = "last_event_ts"
-ALERT_DEDUP_WINDOW_SECONDS = 900  # merge repeated matches into the same open alert for 15 min
 
 
 def _event_to_dict(ev: Event) -> dict:
@@ -71,45 +69,6 @@ class DetectionEngine:
             row.value = ts.isoformat()
         db.commit()
 
-    def _get_or_create_alert(self, db: Session, rule: Rule, group_key: str, title: str, description: str) -> tuple[Alert, bool]:
-        cutoff = datetime.now(timezone.utc) - timedelta(seconds=ALERT_DEDUP_WINDOW_SECONDS)
-        existing = (
-            db.query(Alert)
-            .filter(Alert.rule_key == rule.rule_key, Alert.group_key == group_key,
-                    Alert.status == "open", Alert.updated_at >= cutoff)
-            .order_by(Alert.updated_at.desc())
-            .first()
-        )
-        if existing:
-            return existing, False
-        alert = Alert(
-            rule_id=rule.id, rule_key=rule.rule_key, title=title, description=description,
-            severity=rule.severity, status="open", mitre=rule.mitre, group_key=group_key,
-            event_ids=[], context={},
-        )
-        db.add(alert)
-        return alert, True
-
-    async def _raise_alert(self, db: Session, rule: Rule, group_key: str, event_ids: list[str], context: dict):
-        title = f"{rule.name}" + (f" ({group_key})" if group_key else "")
-        alert, is_new = self._get_or_create_alert(db, rule, group_key, title, rule.description)
-        merged_ids = list(dict.fromkeys((alert.event_ids or []) + event_ids))[-50:]
-        alert.event_ids = merged_ids
-        alert.context = {**(alert.context or {}), **context}
-        db.commit()
-        db.refresh(alert)
-
-        await manager.broadcast({
-            "type": "alert",
-            "data": {
-                "id": alert.id, "title": alert.title, "severity": alert.severity,
-                "rule_key": alert.rule_key, "status": alert.status,
-                "created_at": alert.created_at.isoformat(), "group_key": alert.group_key,
-            },
-        })
-        if is_new:
-            await dispatch_alert_notifications(alert)
-
     async def _eval_threshold(self, db: Session, rule: Rule, ev: dict):
         d = rule.definition or {}
         if not matches_filter(ev, d.get("filter", {})):
@@ -129,7 +88,7 @@ class DetectionEngine:
 
         if len(dq) >= threshold:
             event_ids = [e[1] for e in dq]
-            await self._raise_alert(
+            await raise_alert(
                 db, rule, group_val, event_ids,
                 {"count": len(dq), "window_seconds": d.get("window_seconds"), "group_by": group_field, "group_value": group_val},
             )
@@ -140,7 +99,7 @@ class DetectionEngine:
         if not matches_filter(ev, d.get("filter", {})):
             return
         group_val = ev.get("src_ip") or ev.get("host") or ev.get("user") or ""
-        await self._raise_alert(db, rule, group_val, [ev["id"]], {"matched_event": {k: str(v) for k, v in ev.items() if k != "raw"}})
+        await raise_alert(db, rule, group_val, [ev["id"]], {"matched_event": {k: str(v) for k, v in ev.items() if k != "raw"}})
 
     async def _eval_sequence(self, db: Session, rule: Rule, ev: dict):
         d = rule.definition or {}
@@ -158,7 +117,7 @@ class DetectionEngine:
             state[group_val] = ev["timestamp"]
         elif matches_filter(ev, steps[1]) and group_val in state:
             if ev["timestamp"] - state[group_val] <= window:
-                await self._raise_alert(
+                await raise_alert(
                     db, rule, group_val, [ev["id"]],
                     {"sequence": "step1->step2", "group_by": group_field, "group_value": group_val},
                 )
