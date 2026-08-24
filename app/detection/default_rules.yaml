@@ -345,3 +345,36 @@
   mitre: "T1059 - Command and Scripting Interpreter"
   definition:
     filter: { message_contains_any: ["/dev/tcp/", "bash -i >&", "nc -e /bin/sh", "socat exec", "powershell -nop -w hidden -c"] }
+
+# ---------------- UEBA / behavioral (learned baseline, not a static filter) ----------------
+# Evaluated by app/detection/ueba.py, not the generic rule engine. The thresholds below
+# live in `definition` so they stay tunable from the Rules UI like every other rule.
+
+- rule_key: ueba_impossible_travel
+  name: "Impossible Travel Detected"
+  description: "The same user authenticated from two countries too far apart to have realistically travelled between them in the observed time window."
+  type: behavioral
+  severity: critical
+  mitre: "T1078 - Valid Accounts"
+  definition:
+    min_history_logins: 5
+    max_speed_kmh: 900
+
+- rule_key: ueba_new_country_login
+  name: "Login From New Country"
+  description: "A user authenticated from a country never seen for that user before, after enough history to establish a baseline."
+  type: behavioral
+  severity: medium
+  mitre: "T1078 - Valid Accounts"
+  definition:
+    min_history_logins: 8
+
+- rule_key: ueba_anomalous_login_time
+  name: "Login Outside Normal Hours"
+  description: "A user authenticated at a time of day that is statistically rare for their historical behaviour."
+  type: behavioral
+  severity: medium
+  mitre: "T1078 - Valid Accounts"
+  definition:
+    min_history_logins: 12
+    min_hour_frequency: 0.03
