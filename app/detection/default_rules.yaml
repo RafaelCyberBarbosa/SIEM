@@ -1,0 +1,144 @@
+- rule_key: ssh_bruteforce
+  name: "SSH Brute Force Attempt"
+  description: "5 or more failed SSH logins from the same source IP within 2 minutes."
+  type: threshold
+  severity: high
+  mitre: "T1110 - Brute Force"
+  definition:
+    filter: { category: authentication, action: login_failure }
+    group_by: src_ip
+    threshold: 5
+    window_seconds: 120
+
+- rule_key: rdp_web_bruteforce
+  name: "Repeated Authentication Failures"
+  description: "10 or more failed logins (any protocol) from the same source IP within 5 minutes."
+  type: threshold
+  severity: high
+  mitre: "T1110 - Brute Force"
+  definition:
+    filter: { category: authentication, outcome: failure }
+    group_by: src_ip
+    threshold: 10
+    window_seconds: 300
+
+- rule_key: account_lockout_spike
+  name: "Multiple Account Lockouts"
+  description: "3 or more account lockout events for the same host within 10 minutes."
+  type: threshold
+  severity: medium
+  mitre: "T1110 - Brute Force"
+  definition:
+    filter: { action: account_locked_out }
+    group_by: host
+    threshold: 3
+    window_seconds: 600
+
+- rule_key: privileged_group_change
+  name: "User Added to Privileged Group"
+  description: "A user account was added to an administrative/privileged group."
+  type: match
+  severity: high
+  mitre: "T1098 - Account Manipulation"
+  definition:
+    filter: { action: user_added_to_privileged_group }
+
+- rule_key: new_admin_user
+  name: "New User Account Created"
+  description: "A new local user account was created."
+  type: match
+  severity: medium
+  mitre: "T1136 - Create Account"
+  definition:
+    filter: { action: user_created }
+
+- rule_key: audit_log_cleared
+  name: "Security Audit Log Cleared"
+  description: "The security/audit log was cleared - often used to cover tracks."
+  type: match
+  severity: critical
+  mitre: "T1070.001 - Clear Windows Event Logs"
+  definition:
+    filter: { action: audit_log_cleared }
+
+- rule_key: sql_injection_attempt
+  name: "Possible SQL Injection Attempt"
+  description: "A web request contained a common SQL injection pattern."
+  type: match
+  severity: high
+  mitre: "T1190 - Exploit Public-Facing Application"
+  definition:
+    filter: { category: web, message_contains_any: ["union select", "' or '1'='1", "or 1=1", "; drop table", "xp_cmdshell"] }
+
+- rule_key: directory_traversal_attempt
+  name: "Directory Traversal Attempt"
+  description: "A web request attempted to traverse directories outside the web root."
+  type: match
+  severity: medium
+  mitre: "T1083 - File and Directory Discovery"
+  definition:
+    filter: { category: web, message_contains_any: ["../", "..%2f", "%2e%2e%2f"] }
+
+- rule_key: suspicious_powershell
+  name: "Suspicious PowerShell Execution"
+  description: "PowerShell was invoked with encoded commands or download cradles, common in malware."
+  type: match
+  severity: high
+  mitre: "T1059.001 - PowerShell"
+  definition:
+    filter: { message_contains_any: ["-enc ", "-encodedcommand", "downloadstring", "invoke-expression", "iex(", "bypass -windowstyle hidden"] }
+
+- rule_key: malware_signature_keyword
+  name: "Malware Signature Keyword Detected"
+  description: "Log message contains a known malware/attack tooling keyword."
+  type: match
+  severity: critical
+  mitre: "T1204 - User Execution"
+  definition:
+    filter: { message_contains_any: ["mimikatz", "cobaltstrike", "meterpreter", "empire.ps1", "psexec.exe -accepteula"] }
+
+- rule_key: service_installed_suspicious
+  name: "New Service Installed"
+  description: "A new Windows service was installed - review for persistence mechanisms."
+  type: match
+  severity: medium
+  mitre: "T1543.003 - Windows Service"
+  definition:
+    filter: { action: service_installed }
+
+- rule_key: high_volume_from_host
+  name: "Abnormally High Event Volume From Host"
+  description: "A single host generated an unusually high number of events, possibly indicating a compromised or malfunctioning system."
+  type: threshold
+  severity: medium
+  mitre: "T1499 - Endpoint Denial of Service"
+  definition:
+    filter: {}
+    group_by: host
+    threshold: 200
+    window_seconds: 60
+
+- rule_key: bruteforce_then_success
+  name: "Successful Login Following Failed Attempts"
+  description: "A source IP had a failed login followed by a successful login shortly after - possible successful brute force."
+  type: sequence
+  severity: high
+  mitre: "T1110 - Brute Force"
+  definition:
+    group_by: src_ip
+    window_seconds: 300
+    steps:
+      - { category: authentication, action: login_failure }
+      - { category: authentication, action: login_success }
+
+- rule_key: port_scan_detection
+  name: "Possible Port Scan"
+  description: "Many distinct connection/network failure events from the same source IP in a short window."
+  type: threshold
+  severity: medium
+  mitre: "T1046 - Network Service Discovery"
+  definition:
+    filter: { category: network }
+    group_by: src_ip
+    threshold: 20
+    window_seconds: 30
