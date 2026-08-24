@@ -48,6 +48,7 @@ const ROUTES = {
   events: renderEvents,
   alerts: renderAlerts,
   livetail: renderLiveTail,
+  ueba: renderUEBA,
   rules: renderRules,
   sources: renderSources,
   users: renderUsers,
@@ -415,6 +416,54 @@ function connectWebSocket() {
     document.getElementById("live-feed").prepend(line);
   };
   ws.onclose = () => { if (document.getElementById("live-feed")) document.getElementById("live-feed").insertAdjacentHTML("afterbegin", `<div class="small">Ligação fechada.</div>`); };
+}
+
+// ---------- UEBA (comportamento) ----------
+
+async function renderUEBA(main) {
+  main.innerHTML = `
+    <h1 class="page-title">Análise Comportamental (UEBA)</h1>
+    <p class="small" style="margin-bottom:16px;">
+      Perfis de comportamento aprendidos por utilizador a partir de logins com sucesso.
+      Servem de base às regras "Impossible Travel", "Login From New Country" e "Login Outside Normal Hours" (ver separador Regras).
+    </p>
+    <div id="ueba-body">A carregar...</div>
+  `;
+  try {
+    const profiles = await API.get("/api/ueba/profiles");
+    const body = document.getElementById("ueba-body");
+    if (!profiles.length) {
+      body.innerHTML = `<div class="empty-state">Ainda sem perfis. Faz alguns logins com sucesso (campo "user" preenchido) para começar a construir a baseline.</div>`;
+      return;
+    }
+    body.innerHTML = profiles.map(p => `
+      <div class="panel" style="margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+          <h3 style="margin:0;">${escapeHtml(p.user)}</h3>
+          <span class="small">${p.login_count} logins observados · último: ${p.last_login_at ? fmtDate(p.last_login_at) : "—"}</span>
+        </div>
+        <div class="kv-list" style="margin-bottom:10px;">
+          <div class="k">Último IP</div><div class="mono">${escapeHtml(p.last_login_src_ip) || "—"}</div>
+          <div class="k">Último país</div><div>${p.last_login_country ? escapeHtml(p.last_login_country) : "—"}</div>
+          <div class="k">Países conhecidos</div><div>${(p.known_countries||[]).map(c=>`<span class="badge sev-info">${escapeHtml(c)}</span>`).join(" ") || "—"}</div>
+        </div>
+        <div class="small" style="margin-bottom:4px;">Distribuição de logins por hora (UTC)</div>
+        ${renderHourHistogram(p.hour_histogram)}
+      </div>
+    `).join("");
+  } catch (err) {
+    document.getElementById("ueba-body").innerHTML = `<div class="empty-state">Erro: ${escapeHtml(err.message)}</div>`;
+  }
+}
+
+function renderHourHistogram(hist) {
+  const max = Math.max(1, ...hist);
+  return `<div style="display:flex;align-items:flex-end;gap:2px;height:40px;">
+    ${hist.map((v, h) => `<div title="${h}:00 — ${v} login(s)" style="flex:1;height:${Math.max(2, (v/max)*40)}px;background:${v>0 ? "linear-gradient(var(--accent),var(--accent-2))" : "var(--border)"};border-radius:2px 2px 0 0;"></div>`).join("")}
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:2px;">
+    <span class="small">00h</span><span class="small">12h</span><span class="small">23h</span>
+  </div>`;
 }
 
 // ---------- Rules ----------
