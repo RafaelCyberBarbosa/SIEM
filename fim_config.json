@@ -1,0 +1,11 @@
+{
+  "siem_url": "http://localhost:8000",
+  "api_key": "change-this-ingest-key",
+  "hostname": "my-workstation",
+  "poll_interval_seconds": 5,
+  "watch_paths": [
+    "C:\\Users\\rafae\\OneDrive\\Ambiente de Trabalho\\FIM"
+  ],
+  "ignore_extensions": [".tmp", ".log", ".swp", ".lock"],
+  "max_files": 20000
+}
