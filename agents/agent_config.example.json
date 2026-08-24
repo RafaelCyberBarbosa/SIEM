@@ -1,0 +1,12 @@
+{
+  "siem_url": "http://localhost:8000",
+  "api_key": "PASTE_SOURCE_API_KEY_HERE",
+  "hostname": "my-linux-server",
+  "poll_interval_seconds": 2,
+  "batch_size": 200,
+  "files": [
+    "/var/log/auth.log",
+    "/var/log/nginx/access.log",
+    "/var/log/syslog"
+  ]
+}
