@@ -44,9 +44,19 @@ recolha para Linux e Windows.
     alerta (ex: log limpo, conta adicionada a grupo privilegiado).
   - `sequence`: dois passos ordenados no tempo para o mesmo grupo (ex: falha
     de login seguida de sucesso a partir do mesmo IP).
-  - 14 regras predefinidas cobrindo brute-force, escalada de privilégios,
-    SQL injection, directory traversal, PowerShell suspeito, malware
-    conhecido, port scan, etc. — todas editáveis/desativáveis via UI.
+  - 34 regras predefinidas cobrindo brute-force, escalada de privilégios,
+    integridade de ficheiros, SQL injection, directory traversal, PowerShell
+    suspeito, malware conhecido, port scan, etc. — todas editáveis/
+    desativáveis via UI.
+- **UEBA / análise comportamental** (`app/detection/ueba.py`): em vez de
+  regras fixas, aprende o comportamento normal de cada utilizador (horas de
+  login habituais, países de origem conhecidos) a partir dos logins com
+  sucesso, e pontua novos logins contra essa baseline. Deteta **Impossible
+  Travel** (login em dois países num intervalo de tempo fisicamente
+  impossível de percorrer, com pontuação de risco 0-100), login a partir de
+  país novo, e login fora do horário habitual. A resolução de país/
+  coordenadas por IP usa o serviço gratuito ip-api.com com cache local
+  (`app/core/geoip.py`) — cada IP só é consultado uma vez.
 - **Alertas** (`app/alerting/`): notificações por email (SMTP) e webhook
   genérico (compatível com Slack/Discord/Teams via JSON), com deduplicação
   (alertas repetidos da mesma regra+grupo são fundidos por 15 minutos).
@@ -117,11 +127,24 @@ listener de syslog em `udp/tcp 5514`.
      Isto gera tráfego normal e injeta padrões maliciosos (brute-force SSH,
      SQL injection, escalada de privilégios, assinatura de malware) para ver
      o dashboard e os alertas a funcionar.
+   - **Demonstração de UEBA / Impossible Travel**:
+     ```bash
+     python scripts/generate_ueba_demo.py --siem-url http://localhost:8000 --api-key SUA_CHAVE
+     ```
+     Cria uma baseline de logins normais para um utilizador a partir de
+     Portugal, depois simula um login a partir da Alemanha 2 minutos depois
+     — dispara um alerta crítico de "Impossible Travel" com pontuação de
+     risco. Vê o resultado em **Alertas** e o perfil aprendido em
+     **Comportamento**.
 4. **Regras**: ative/desative, edite severidade e a definição JSON de
    qualquer regra, ou crie novas.
 5. **Alertas**: veja, filtre por severidade/estado, marque como reconhecido/
-   resolvido, veja os eventos que o geraram.
-6. **Live Tail**: stream em tempo real de todos os eventos e alertas
+   resolvido, veja os eventos que o geraram, e clique em **"Ver cadeia de
+   ataque"** para reconstruir a linha temporal de tudo o que aconteceu com o
+   mesmo IP/host/utilizador.
+6. **Comportamento (UEBA)**: perfis de comportamento aprendidos por
+   utilizador — horas de login habituais e países conhecidos.
+7. **Live Tail**: stream em tempo real de todos os eventos e alertas
    (WebSocket).
 
 ## Agentes de recolha
@@ -166,7 +189,7 @@ DNS local), ou uma pasta de configuração de uma aplicação sensível.
 
 ## Regras de deteção incluídas
 
-34 regras predefinidas, todas editáveis/ativáveis/desativáveis na UI
+37 regras predefinidas, todas editáveis/ativáveis/desativáveis na UI
 (separador **Regras**) sem tocar em código:
 
 - **Ficheiros**: criação, alteração e eliminação de ficheiros, modificação de
@@ -185,6 +208,8 @@ DNS local), ou uma pasta de configuração de uma aplicação sensível.
   file inclusion.
 - **Malware/execução**: PowerShell suspeito, padrão de reverse shell,
   assinaturas de ferramentas conhecidas (Mimikatz, Cobalt Strike, etc.).
+- **Comportamental (UEBA)**: impossible travel, login a partir de país novo,
+  login fora do horário habitual — ver secção UEBA acima.
 
 ## Configuração (`.env`)
 
@@ -201,8 +226,9 @@ pytest tests/ -v
 
 Cobertura: parsers de log, motor de correspondência de filtros de regras, o
 agente de integridade de ficheiros (deteção de criação/alteração/eliminação),
-e um teste de integração ponta-a-ponta (ingestão → deteção → alerta) para a
-regra de brute-force SSH.
+o motor UEBA (cálculo de distância/impossible travel), a cadeia de ataque
+(correlação de eventos+alertas), e testes de integração ponta-a-ponta
+(ingestão → deteção → alerta) para brute-force SSH e impossible travel.
 
 ## Modelo de dados
 
