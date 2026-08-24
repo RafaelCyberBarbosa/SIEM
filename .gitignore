@@ -14,3 +14,9 @@ data/
 node_modules/
 dist/
 build/
+
+# Local agent configs/state (machine-specific paths and keys, never shared)
+agent_config.json
+fim_config.json
+.agent_state.json
+.fim_state.json
