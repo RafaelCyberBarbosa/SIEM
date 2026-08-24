@@ -38,7 +38,7 @@ function drawBarChart(canvas, labels, values, color = "#2ee6d6") {
     ctx.save();
     if (v > 0) {
       ctx.shadowColor = color;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 2;
     }
     ctx.fillStyle = grad;
     ctx.fillRect(x, y, barW, barH);
@@ -111,5 +111,5 @@ function drawDonutChart(canvas, dataObj, colorMap) {
 }
 
 const SEVERITY_COLORS = {
-  info: "#3ea6ff", low: "#39ff8a", medium: "#ffd23f", high: "#ff9b42", critical: "#ff2559",
+  info: "#60a5fa", low: "#34d399", medium: "#fbbf24", high: "#fb923c", critical: "#ef4444",
 };
