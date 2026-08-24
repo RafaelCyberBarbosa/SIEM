@@ -148,6 +148,44 @@ pip install -r agents\requirements-agent.txt
 python agents\windows_eventlog_collector.py --siem-url http://localhost:8000 --api-key SUA_CHAVE
 ```
 
+### Integridade de ficheiros (FIM) — criação/alteração/eliminação de ficheiros
+
+Multiplataforma, sem dependências extra. Vigia os ficheiros/pastas indicados e
+reporta `file_created` / `file_modified` / `file_deleted` ao SIEM. A primeira
+execução só cria uma base de referência (não envia eventos); a partir da
+segunda deteta mudanças reais.
+
+```powershell
+cp agents\fim_config.example.json fim_config.json   # edite siem_url, api_key, watch_paths
+python agents\file_integrity_agent.py --config fim_config.json
+```
+
+Exemplo de `watch_paths` úteis: a tua pasta de Downloads (deteta malware
+descarregado), `C:\Windows\System32\drivers\etc\hosts` (deteta manipulação de
+DNS local), ou uma pasta de configuração de uma aplicação sensível.
+
+## Regras de deteção incluídas
+
+34 regras predefinidas, todas editáveis/ativáveis/desativáveis na UI
+(separador **Regras**) sem tocar em código:
+
+- **Ficheiros**: criação, alteração e eliminação de ficheiros, modificação de
+  ficheiros de sistema sensíveis, executáveis novos, eliminação/modificação
+  em massa (indicador de ransomware).
+- **Autenticação**: brute-force SSH/RDP/web, lockouts em massa, login falhado
+  em conta privilegiada, sucesso após falhas repetidas.
+- **Contas**: criação de utilizador, adição a grupo privilegiado, conta guest
+  ativada, password sem expiração, administrador renomeado.
+- **Sistema**: log de auditoria limpo, tarefa agendada criada, política de
+  auditoria alterada, firewall desativada, antivírus desativado, novo serviço
+  instalado.
+- **Rede**: possível port scan, ligação a porta associada a C2/reverse shell,
+  volume elevado de ligações de saída.
+- **Web**: SQL injection, directory traversal, upload de web shell, remote
+  file inclusion.
+- **Malware/execução**: PowerShell suspeito, padrão de reverse shell,
+  assinaturas de ferramentas conhecidas (Mimikatz, Cobalt Strike, etc.).
+
 ## Configuração (`.env`)
 
 Ver `.env.example` para todas as opções: base de dados, chave secreta JWT,
@@ -161,8 +199,9 @@ pip install -r requirements-dev.txt
 pytest tests/ -v
 ```
 
-Cobertura: parsers de log, motor de correspondência de filtros de regras, e
-um teste de integração ponta-a-ponta (ingestão → deteção → alerta) para a
+Cobertura: parsers de log, motor de correspondência de filtros de regras, o
+agente de integridade de ficheiros (deteção de criação/alteração/eliminação),
+e um teste de integração ponta-a-ponta (ingestão → deteção → alerta) para a
 regra de brute-force SSH.
 
 ## Modelo de dados
