@@ -2,6 +2,7 @@ const state = {
   eventsPage: 1,
   alertsPage: 1,
   ws: null,
+  sessionStart: null,
 };
 
 // ---------- Auth / bootstrap ----------
@@ -14,11 +15,86 @@ function showApp() {
   if (user.role !== "admin") document.getElementById("nav-users").classList.add("hidden");
   window.addEventListener("hashchange", router);
   router();
+  state.sessionStart = state.sessionStart || Date.now();
+  window.dispatchEvent(new Event("resize")); // let the matrix-rain canvas size itself now that it's visible
+  startClocks();
+  startHudTicker();
 }
 
 function showLogin() {
   document.getElementById("app").classList.add("hidden");
   document.getElementById("login-screen").classList.remove("hidden");
+  runBootLog();
+}
+
+// ---------- Terminal boot sequence (login screen flavor) ----------
+
+const BOOT_LINES = [
+  { t: "ok", msg: "[  OK  ] kernel: siem-core v1.0.0 initialised" },
+  { t: "ok", msg: "[  OK  ] loading detection rule pack..." },
+  { t: "ok", msg: "[  OK  ] ueba engine: baseline models ready" },
+  { t: "ok", msg: "[  OK  ] geoip resolver: cache warm" },
+  { t: "warn", msg: "[ WARN ] 3 sources idle > 15m" },
+  { t: "ok", msg: "[  OK  ] syslog listener bound :5514/udp+tcp" },
+  { t: "tag", msg: "> establishing secure channel..." },
+  { t: "tag", msg: "> awaiting operator credentials_" },
+];
+
+function runBootLog() {
+  const el = document.getElementById("boot-log");
+  if (!el) return;
+  el.innerHTML = "";
+  BOOT_LINES.forEach((line, i) => {
+    setTimeout(() => {
+      const div = document.createElement("div");
+      div.className = line.t;
+      div.textContent = line.msg;
+      el.appendChild(div);
+    }, i * 260);
+  });
+}
+
+// ---------- Sidebar live clocks ----------
+
+function startClocks() {
+  if (state._clockTimer) return;
+  const tick = () => {
+    const utcEl = document.getElementById("clock-utc");
+    const upEl = document.getElementById("clock-uptime");
+    if (utcEl) utcEl.textContent = new Date().toISOString().slice(11, 19) + "Z";
+    if (upEl && state.sessionStart) {
+      const secs = Math.floor((Date.now() - state.sessionStart) / 1000);
+      const h = String(Math.floor(secs / 3600)).padStart(2, "0");
+      const m = String(Math.floor((secs % 3600) / 60)).padStart(2, "0");
+      const s = String(secs % 60).padStart(2, "0");
+      upEl.textContent = `${h}:${m}:${s}`;
+    }
+  };
+  tick();
+  state._clockTimer = setInterval(tick, 1000);
+}
+
+// ---------- Top HUD ticker ----------
+
+async function startHudTicker() {
+  const populate = async () => {
+    const track = document.getElementById("hud-ticker-track");
+    if (!track) return;
+    try {
+      const stats = await API.get("/api/stats/dashboard");
+      const parts = [
+        `<span>EVENTOS/24H</span>${stats.total_events_24h}`,
+        `<span>EVENTOS/1H</span>${stats.total_events_1h}`,
+        `<span>ALERTAS ABERTOS</span>${stats.total_alerts_open}`,
+        `<span>FONTES ATIVAS</span>${stats.sources_online}`,
+        `<span>NÍVEL DE AMEAÇA</span>${stats.total_alerts_open > 5 ? "ELEVADO" : stats.total_alerts_open > 0 ? "MODERADO" : "NOMINAL"}`,
+        `<span>ESTADO</span>TODOS OS SISTEMAS OPERACIONAIS`,
+      ];
+      track.innerHTML = parts.join('<span style="color:var(--text-faint);margin:0 10px;">//</span>');
+    } catch (e) { /* keep last known ticker content on transient errors */ }
+  };
+  await populate();
+  if (!state._tickerTimer) state._tickerTimer = setInterval(populate, 30000);
 }
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
@@ -389,7 +465,13 @@ async function updateAlertStatus(id) {
 function renderLiveTail(main) {
   main.innerHTML = `
     <h1 class="page-title">Live Tail</h1>
-    <div class="live-feed" id="live-feed"><div class="small">A ligar...</div></div>
+    <div class="terminal-window">
+      <div class="terminal-titlebar">
+        <span class="terminal-dot red"></span><span class="terminal-dot yellow"></span><span class="terminal-dot green"></span>
+        <span class="tt-title">root@zeroday-siem:~# tail -f /var/log/siem/live.sock</span>
+      </div>
+      <div class="live-feed" id="live-feed"><div class="small">A ligar...</div></div>
+    </div>
   `;
   connectWebSocket();
 }
@@ -400,7 +482,7 @@ function connectWebSocket() {
   const ws = new WebSocket(`${proto}://${window.location.host}/ws/live?token=${encodeURIComponent(API.getToken())}`);
   state.ws = ws;
   const feed = document.getElementById("live-feed");
-  ws.onopen = () => { if (feed) feed.innerHTML = `<div class="small">Ligado. À espera de eventos...</div>`; };
+  ws.onopen = () => { if (feed) feed.innerHTML = `<div class="term-cursor-line">connected. streaming live events <span class="term-cursor"></span></div>`; };
   ws.onmessage = (msg) => {
     const payload = JSON.parse(msg.data);
     if (!document.getElementById("live-feed")) return; // navigated away
@@ -408,10 +490,10 @@ function connectWebSocket() {
     line.className = "live-line";
     if (payload.type === "event") {
       const ev = payload.data;
-      line.innerHTML = `<span class="ts">${fmtDate(ev.timestamp)}</span><span class="host">${escapeHtml(ev.host)}</span><span>${severityBadge(ev.severity)}</span><span>${escapeHtml(ev.category)}/${escapeHtml(ev.action)}</span><span>${escapeHtml((ev.message||"").slice(0,120))}</span>`;
+      line.innerHTML = `<span class="prompt">&gt;</span><span class="ts">${fmtDate(ev.timestamp)}</span><span class="host">${escapeHtml(ev.host)}</span><span>${severityBadge(ev.severity)}</span><span>${escapeHtml(ev.category)}/${escapeHtml(ev.action)}</span><span>${escapeHtml((ev.message||"").slice(0,120))}</span>`;
     } else if (payload.type === "alert") {
       const al = payload.data;
-      line.innerHTML = `<span class="ts">${fmtDate(al.created_at)}</span><span style="color:#eb5757">🚨 ALERTA</span>${severityBadge(al.severity)}<span>${escapeHtml(al.title)}</span>`;
+      line.innerHTML = `<span class="prompt">!</span><span class="ts">${fmtDate(al.created_at)}</span><span style="color:#ff5c81">ALERTA</span>${severityBadge(al.severity)}<span>${escapeHtml(al.title)}</span>`;
     }
     document.getElementById("live-feed").prepend(line);
   };
